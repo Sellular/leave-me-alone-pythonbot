@@ -7,7 +7,7 @@ class IgnoreRoleCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.slash_command(guild_ids=[839673797066096660], guild_only=True)
+    @commands.slash_command()
     @discord.option("role", discord.Role, description="Role to be ignored", required=True)
     async def ignorerole(self, ctx: discord.ApplicationContext, role: discord.Role):
         try:
