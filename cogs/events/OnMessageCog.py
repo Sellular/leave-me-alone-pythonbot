@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 from utils import GeneralUtils
+from dao import IgnoreRoleDAO, LeaveAloneMemberDAO
 
 class OnMessageCog(commands.Cog):
     def __init__(self, bot):
@@ -12,26 +13,31 @@ class OnMessageCog(commands.Cog):
         if message.mentions:
             if not message.author.bot:
                 try:
-                    userLeftAloneConfig = GeneralUtils.getConfig('userleftalone')
+                    ignore_roles = IgnoreRoleDAO.getIgnoreRolesByGuild(str(message.guild.id))
+                    if ignore_roles is None:
+                        raise Exception("Error during ignore role retrieval")
 
-                    if not userLeftAloneConfig:
-                        raise Exception("userleftalone section not found in config.")
+                    ignore = False
+                    for roleIDStr in ignore_roles:
+                        roleID = int(roleIDStr)
+                        ignore_role = discord.utils.get(message.author.roles, id=roleID)
+                        if ignore_role:
+                            ignore = True
 
-                    userID = userLeftAloneConfig['user_id']
-                    if not userID:
-                        raise Exception("USER_ID not found in userleftalone config.")
+                    if not ignore:
+                        leave_alone_members = LeaveAloneMemberDAO.getLeaveAloneMembersByGuild(str(message.guild.id))
+                        if leave_alone_members is None:
+                            raise Exception("Error during leave alone member retrieval")
 
-                    leftAloneUser = discord.utils.get(message.guild.members, id = int(userID))
-                    if not leftAloneUser:
-                        raise Exception(f"User with id: {userID} not found in the guild.")
+                        mentioned_users = []
+                        for member in message.mentions:
+                            for memberIDStr in leave_alone_members:
+                                if member.id == int(memberIDStr):
+                                    mentioned_users.append(member)
 
-                    mentioned_user = False
-                    for member in message.mentions:
-                        if member.id == int(userID):
-                            mentioned_user = True
-
-                    if mentioned_user:
-                        await message.channel.send(f"{message.author.mention} Please don't ping {leftAloneUser.display_name} unless it is important.")
+                        if mentioned_users:
+                            for user in mentioned_users:
+                                await message.channel.send(f"{message.author.mention} Please don't ping {user.display_name} unless it is important.")
 
                 except Exception as error:
                     print(error)
